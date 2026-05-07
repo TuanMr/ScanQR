@@ -71,11 +71,6 @@ button{
     color:white;
 }
 
-.sheet{
-    background:#673ab7;
-    color:white;
-}
-
 .copy{
     background:#007bff;
     color:white;
@@ -112,6 +107,14 @@ textarea{
     display:none;
 }
 
+#status{
+    margin-top:10px;
+    text-align:center;
+    font-size:16px;
+    font-weight:bold;
+    color:#333;
+}
+
 </style>
 </head>
 
@@ -138,6 +141,8 @@ Tổng scan:
 QR ĐÃ TỒN TẠI
 </div>
 
+<div id="status"></div>
+
 <button class="start"
 onclick="startScanner()">
 Start Scanner
@@ -146,11 +151,6 @@ Start Scanner
 <button class="stop"
 onclick="stopScanner()">
 Stop Scanner
-</button>
-
-<button class="sheet"
-onclick="sendToSheet()">
-Send to Google Sheet
 </button>
 
 <button class="copy"
@@ -163,14 +163,15 @@ onclick="clearList()">
 Clear List
 </button>
 
-<textarea id="resultList"></textarea>
+<textarea id="resultList"
+placeholder="Danh sách mã scan..."></textarea>
 
 </div>
 
 <script>
 
 const GOOGLE_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbwPQ5QZFUS8vmcU-ax3YFtFU0VhheBZr4ScohV-ms63_SxvNRoueHUieZzl85DeU02ZgA/exec";
+"https://script.google.com/macros/s/AKfycbzStETLOoc2dfZhU33SWJ3DKO0YBfPBKq7WEJu5_YobczeDQGXkuFSJsbxFeBCJVzJY3A/exec";
 
 let scannedList = [];
 
@@ -236,7 +237,7 @@ async function startScanner(){
                 }
             },
 
-            function(decodedText){
+            async function(decodedText){
 
                 if(
                     scannedList.includes(
@@ -270,6 +271,10 @@ async function startScanner(){
                 navigator.vibrate?.(100);
 
                 flashEffect();
+
+                await autoSendToSheet(
+                    decodedText
+                );
             }
         );
 
@@ -279,7 +284,45 @@ async function startScanner(){
 
     }catch(err){
 
-        alert(err);
+        alert(
+            "Lỗi camera:\n" + err
+        );
+    }
+}
+
+async function autoSendToSheet(code){
+
+    try{
+
+        setStatus(
+            "Đang gửi: " + code
+        );
+
+        const url =
+            GOOGLE_SCRIPT_URL +
+            "?code=" +
+            encodeURIComponent(code);
+
+        await fetch(
+            url,
+            {
+                method:"GET",
+                mode:"no-cors",
+                cache:"no-cache"
+            }
+        );
+
+        setStatus(
+            "Đã gửi: " + code
+        );
+
+    }catch(err){
+
+        console.error(err);
+
+        setStatus(
+            "Lỗi gửi dữ liệu"
+        );
     }
 }
 
@@ -320,53 +363,15 @@ function clearList(){
     document.getElementById(
         "count"
     ).innerText = 0;
+
+    setStatus("");
 }
 
-function sendToSheet(){
+function setStatus(text){
 
-    if(scannedList.length === 0){
-
-        alert("Không có dữ liệu");
-
-        return;
-    }
-
-    try{
-
-        for(let code of scannedList){
-
-            const payload =
-                JSON.stringify({
-                    code:code
-                });
-
-            const blob =
-                new Blob(
-                    [payload],
-                    {
-                        type:
-                        "text/plain"
-                    }
-                );
-
-            navigator.sendBeacon(
-                GOOGLE_SCRIPT_URL,
-                blob
-            );
-        }
-
-        alert(
-            "Đã gửi Google Sheet"
-        );
-
-    }catch(err){
-
-        console.error(err);
-
-        alert(
-            "Lỗi gửi dữ liệu"
-        );
-    }
+    document.getElementById(
+        "status"
+    ).innerText = text;
 }
 
 function showDuplicateWarning(){
