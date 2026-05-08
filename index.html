@@ -6,7 +6,7 @@
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0">
 
-<title>QR Scanner PRO</title>
+<title>QR Scanner Zalopay</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -68,11 +68,6 @@ button{
 
 .stop{
     background:#ff9800;
-    color:white;
-}
-
-.sheet{
-    background:#673ab7;
     color:white;
 }
 
@@ -156,11 +151,6 @@ Start Scanner
 <button class="stop"
 onclick="stopScanner()">
 Stop Scanner
-</button>
-
-<button class="sheet"
-onclick="sendToSheet()">
-Send to Google Sheet
 </button>
 
 <button class="copy"
@@ -247,7 +237,7 @@ async function startScanner(){
                 }
             },
 
-            function(decodedText){
+            async function(decodedText){
 
                 if(
                     scannedList.includes(
@@ -281,6 +271,10 @@ async function startScanner(){
                 navigator.vibrate?.(100);
 
                 flashEffect();
+
+                await autoSendToSheet(
+                    decodedText
+                );
             }
         );
 
@@ -292,6 +286,42 @@ async function startScanner(){
 
         alert(
             "Lỗi camera:\n" + err
+        );
+    }
+}
+
+async function autoSendToSheet(code){
+
+    try{
+
+        setStatus(
+            "Đang gửi: " + code
+        );
+
+        const url =
+            GOOGLE_SCRIPT_URL +
+            "?code=" +
+            encodeURIComponent(code);
+
+        await fetch(
+            url,
+            {
+                method:"GET",
+                mode:"no-cors",
+                cache:"no-cache"
+            }
+        );
+
+        setStatus(
+            "Đã gửi: " + code
+        );
+
+    }catch(err){
+
+        console.error(err);
+
+        setStatus(
+            "Lỗi gửi dữ liệu"
         );
     }
 }
@@ -335,60 +365,6 @@ function clearList(){
     ).innerText = 0;
 
     setStatus("");
-}
-
-async function sendToSheet(){
-
-    if(scannedList.length === 0){
-
-        alert("Không có dữ liệu");
-
-        return;
-    }
-
-    try{
-
-        setStatus(
-            "Đang gửi dữ liệu..."
-        );
-
-        for(let code of scannedList){
-
-            const url =
-                GOOGLE_SCRIPT_URL +
-                "?code=" +
-                encodeURIComponent(code);
-
-            await fetch(
-                url,
-                {
-                    method:"GET",
-                    mode:"no-cors",
-                    cache:"no-cache"
-                }
-            );
-        }
-
-        setStatus(
-            "Đã gửi Google Sheet"
-        );
-
-        alert(
-            "Đã gửi Google Sheet"
-        );
-
-    }catch(err){
-
-        console.error(err);
-
-        setStatus(
-            "Lỗi gửi dữ liệu"
-        );
-
-        alert(
-            "Lỗi gửi dữ liệu"
-        );
-    }
 }
 
 function setStatus(text){
